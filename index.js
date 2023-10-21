@@ -30,28 +30,28 @@ app.get('/api/hello', function(req, res) {
 
 app.use(bodyParser.urlencoded({extended: false}));
 
-app.post('/api/shorturl/', async (req,res,next) => {
+app.post('/api/shorturl/', async (req,res) => {
   let urlRegex = /https:\/\/www.|http:\/\/www./g;
 
   dns.lookup(req.body.url.replace(urlRegex,""), (err, address, family) => {
     if (err) {
-      req.isValidUrl = false;
+      res.json({error: "invalid url"})
     } else {
-      req.isValidUrl = true;
+      Url.find().exec().then(data => {
+        new Url({
+          original_url: req.body.url,
+          short_url: data.length + 1
+        }).save()
+          .then(() => {
+            res.json({
+              original_url: req.body.url,
+              short_url: data.length + 1
+            });
+          })
+          .catch(err => res.json(err));
+      });
     }
-  })
-    if (req.isValidUrl){
-      req.shortUrl = await Url.countDocuments({});
-      req.originalUrl = req.body.url;
-      new Url({"original_url": req.originalUrl, "short_url": req.shortUrl}).save((err,data) => {
-        if (err) return console.log(err);
-      })
-    }
-  next();
-},(req, res) => {
-  req.isValidUrl ?
-  res.json({"original_url": req.originalUrl, "short_url": req.shortUrl + 1})
-  : res.json({error: "invalid url"})
+  });
 });
 
 app.get('/api/shorturl/:short', async (req, res, next) => {
