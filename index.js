@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const app = express();
-
+const dns = require('dns');
 const bodyParser = require('body-parser');
 let mongoose = require('mongoose')
 mongoose.connect(process.env.MONGO_URI,{ useNewUrlParser: true, useUnifiedTopology: true })
@@ -30,24 +30,23 @@ app.get('/api/hello', function(req, res) {
 
 app.use(bodyParser.urlencoded({extended: false}));
 
-function isValidUrl(string) {
-  try {
-    new URL(string);
-    return true;
-  } catch (err) {
-    return false;
-  }
-}
-
 app.post('/api/shorturl/', async (req,res,next) => {
-  req.isValidUrl = isValidUrl(req.body.url);
-  if(req.isValidUrl){
-    req.shortUrl = await Url.countDocuments({});
-    req.originalUrl = req.body.url;
-    new Url({"original_url": req.originalUrl, "short_url": req.shortUrl}).save((err,data) => {
-      if (err) return console.log(err);
-    })
-  }
+  let urlRegex = /https:\/\/www.|http:\/\/www./g;
+
+  dns.lookup(req.body.url.replace(urlRegex,""), (err, address, family) => {
+    if (err) {
+      req.isValidUrl = false;
+    } else {
+      req.isValidUrl = true;
+    }
+  })
+    if (req.isValidUrl){
+      req.shortUrl = await Url.countDocuments({});
+      req.originalUrl = req.body.url;
+      new Url({"original_url": req.originalUrl, "short_url": req.shortUrl}).save((err,data) => {
+        if (err) return console.log(err);
+      })
+    }
   next();
 },(req, res) => {
   req.isValidUrl ?
